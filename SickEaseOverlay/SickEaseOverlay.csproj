@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <PackageProjectUrl>https://github.com/w0lfv/SickEaseOverlay</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/w0lfv/SickEaseOverlay</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <FileVersion>1.0.0.5</FileVersion>
+    <Authors>w0lfv</Authors>
+    <SignAssembly>False</SignAssembly>
+  </PropertyGroup>
+
+</Project>
