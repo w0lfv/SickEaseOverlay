@@ -9,7 +9,9 @@
     <PackageProjectUrl>https://github.com/w0lfv/SickEaseOverlay</PackageProjectUrl>
     <RepositoryUrl>https://github.com/w0lfv/SickEaseOverlay</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <FileVersion>1.0.0.5</FileVersion>
+    <FileVersion>1.0.1.0</FileVersion>
+    <Version>1.0.1</Version>
+    <AssemblyVersion>1.0.1.0</AssemblyVersion>
     <Authors>w0lfv</Authors>
     <SignAssembly>False</SignAssembly>
   </PropertyGroup>

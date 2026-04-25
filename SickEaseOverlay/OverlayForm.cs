@@ -1,4 +1,4 @@
-﻿using System.Runtime.InteropServices;
+using System.Runtime.InteropServices;
 
 namespace SickEaseOverlay
 {
@@ -12,6 +12,9 @@ namespace SickEaseOverlay
 
         [DllImport("user32.dll")]
         private static extern bool GetWindowRect(IntPtr hwnd, out RECT lpRect);
+
+        [DllImport("user32.dll")]
+        private static extern bool IsWindow(IntPtr hWnd);
 
         private struct RECT
         {
@@ -49,10 +52,7 @@ namespace SickEaseOverlay
 
         private void OverlayForm_Paint(object sender, PaintEventArgs e)
         {
-            // Set the graphics object to the form's graphics context
             Graphics g = e.Graphics;
-
-            // Get the center of the screen to draw the sight
             int centerX = ClientSize.Width / 2;
             int centerY = ClientSize.Height / 2;
 
@@ -61,77 +61,46 @@ namespace SickEaseOverlay
                 case CrosshairType.Cross:
                     {
                         int size = crossHairSize + (int)pen.Width;
-                        Point p1 = new Point(centerX - size, centerY); // Left
-                        Point p2 = new Point(centerX + size, centerY); // Right
-                        Point p3 = new Point(centerX, centerY + size); // Down
-                        Point p4 = new Point(centerX, centerY - size); // Up
-
-                        g.DrawLine(pen, p1, p2); // The horizontal line of sight
-                        g.DrawLine(pen, p3, p4); // The vertical line of sight
+                        g.DrawLine(pen, centerX - size, centerY, centerX + size, centerY);
+                        g.DrawLine(pen, centerX, centerY - size, centerX, centerY + size);
                     }
                     break;
                 case CrosshairType.Square:
                     {
                         int size = 5 + (int)pen.Width * 2;
-                        g.FillRectangle(pen.Brush, new Rectangle(centerX - size, centerY - size, size * 2, size * 2)); // The square of sight
+                        g.FillRectangle(pen.Brush, centerX - size, centerY - size, size * 2, size * 2);
                     }
                     break;
                 case CrosshairType.Circle:
                     {
                         int size = 5 + (int)pen.Width * 2;
-                        g.FillEllipse(pen.Brush, new Rectangle(centerX - size / 2, centerY - size / 2, size, size));
+                        g.FillEllipse(pen.Brush, centerX - size / 2, centerY - size / 2, size, size);
                     }
                     break;
             }
 
             if (useSecondaryCrosshair)
             {
+                int armW = secondaryCrosshairHeight * secondaryCrosshairSize * 10;
+                int armL = secondaryCrosshairWidth * secondaryCrosshairSize * 10;
+
                 // Top
-                g.FillRectangle(pen.Brush, 
-                    new Rectangle(
-                        centerX - secondaryCrosshairHeight * secondaryCrosshairSize * 5,
-                        0,
-                        secondaryCrosshairHeight * secondaryCrosshairSize * 10,
-                        secondaryCrosshairWidth * secondaryCrosshairSize * 10
-                    )
-                );
-
+                g.FillRectangle(pen.Brush, centerX - armW / 2, 0, armW, armL);
                 // Bottom
-                g.FillRectangle(pen.Brush,
-                    new Rectangle(
-                        centerX - secondaryCrosshairHeight * secondaryCrosshairSize * 5,
-                        ClientSize.Height - secondaryCrosshairWidth * secondaryCrosshairSize * 10,
-                        secondaryCrosshairHeight * secondaryCrosshairSize * 10,
-                        secondaryCrosshairWidth * secondaryCrosshairSize * 10
-                    )
-                );
-
+                g.FillRectangle(pen.Brush, centerX - armW / 2, ClientSize.Height - armL, armW, armL);
                 // Left
-                g.FillRectangle(pen.Brush,
-                    new Rectangle(
-                        0,
-                        centerY - secondaryCrosshairHeight * secondaryCrosshairSize * 5,
-                        secondaryCrosshairWidth * secondaryCrosshairSize * 10,
-                        secondaryCrosshairHeight * secondaryCrosshairSize * 10
-                    )
-                );
-
+                g.FillRectangle(pen.Brush, 0, centerY - armW / 2, armL, armW);
                 // Right
-                g.FillRectangle(pen.Brush,
-                    new Rectangle(
-                        ClientSize.Width - secondaryCrosshairWidth * secondaryCrosshairSize * 10,
-                        centerY - secondaryCrosshairHeight * secondaryCrosshairSize * 5,
-                        secondaryCrosshairWidth * secondaryCrosshairSize * 10,
-                        secondaryCrosshairHeight * secondaryCrosshairSize * 10
-                    )
-                );
+                g.FillRectangle(pen.Brush, ClientSize.Width - armL, centerY - armW / 2, armL, armW);
             }
         }
 
         private void applicationTimer_Tick(object sender, EventArgs e)
         {
-            // Change Location and Size if the application window is moved or resized
-            if (GetWindowRect(currentWindowHandle, out RECT rect) && 
+            if (currentWindowHandle == IntPtr.Zero || !IsWindow(currentWindowHandle))
+                return;
+
+            if (GetWindowRect(currentWindowHandle, out RECT rect) &&
                 (rect.Left != Location.X || rect.Top != Location.Y || Size.Width != rect.Right - rect.Left || Size.Height != rect.Bottom - rect.Top))
             {
                 Location = new Point(rect.Left, rect.Top);
@@ -142,8 +111,8 @@ namespace SickEaseOverlay
 
         internal void SetTargetMonitor(Screen screen)
         {
-            //Kill following the application window Thread and Set the form to cover the entire screen
             applicationTimer.Stop();
+            currentWindowHandle = IntPtr.Zero;
 
             Top = screen.Bounds.Top;
             Left = screen.Bounds.Left;
@@ -153,7 +122,6 @@ namespace SickEaseOverlay
 
         internal void SetTargetWindow(IntPtr hWnd)
         {
-            // Start Following the application window Thread and Set the form to cover the entire screen
             currentWindowHandle = hWnd;
             applicationTimer.Start();
         }
@@ -186,6 +154,16 @@ namespace SickEaseOverlay
         {
             secondaryCrosshairSize = size;
             Invalidate();
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                pen?.Dispose();
+                components?.Dispose();
+            }
+            base.Dispose(disposing);
         }
     }
 }
