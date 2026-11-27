@@ -11,12 +11,24 @@ namespace SickEaseOverlay
         Application
     }
 
+    // Values are saved as numbers: only ever append.
     public enum CrosshairType
     {
         None,
         Cross,
         Circle,
-        Square
+        Square,
+        X,
+        Diamond
+    }
+
+    public enum SecondaryCrosshairType
+    {
+        None,
+        Edges,   // bars at the middle of each edge
+        Corners, // L-brackets; keeps the middle of each edge (compass, hotbar, subtitles) clear
+        Border,  // thin frame hugging the screen edge, under most HUD margins
+        Dots     // evenly spaced dots over the whole screen as a fixed visual reference
     }
 
     public partial class MainForm : Form
@@ -41,17 +53,145 @@ namespace SickEaseOverlay
         [DllImport("user32.dll")]
         private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
+        [DllImport("user32.dll")]
+        private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+
+        [DllImport("user32.dll")]
+        private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+
+        private const int WM_HOTKEY = 0x0312;
+        private const uint MOD_ALT = 0x1, MOD_CONTROL = 0x2, MOD_SHIFT = 0x4, MOD_NOREPEAT = 0x4000;
+
         // Monitor Settings
         private Screen[] cachedScreens = Screen.AllScreens;
 
         // Windows Settings
         private readonly List<(IntPtr hWnd, string title, string processName)> windows = new();
 
+        // Re-attaches to the saved app when it starts (or restarts) after this app.
+        // ponytail: 2s poll; SetWinEventHook(EVENT_OBJECT_SHOW) if latency or CPU ever matters.
+        private readonly System.Windows.Forms.Timer reconnectTimer = new() { Interval = 2000 };
+
+        // Rows that can be hidden, plus every row below them, top to bottom. Hidden rows collapse and
+        // the rest move up. ponytail: manual reflow over the designer's absolute layout; move to a
+        // TableLayoutPanel if the form keeps growing.
+        private readonly Control[] sizeRow, lengthRow, gapRow, secondarySizeRow;
+        private readonly Control[][] rows;
+        private readonly HashSet<Control[]> hiddenRows = new();
+        private readonly Dictionary<Control, int> designTop;
+        private readonly int[] rowTop;
+        private readonly int designClientHeight;
+        private readonly float designFontHeight;
+
         public MainForm()
         {
             InitializeComponent();
             SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
             FormClosing += OnFormClosing;
+            reconnectTimer.Tick += reconnectTimer_Tick;
+
+            sizeRow = new Control[] { labelSize, barSize, updownSize };
+            lengthRow = new Control[] { labelLength, barLength, updownLength };
+            gapRow = new Control[] { labelGap, barGap, updownGap };
+            secondarySizeRow = new Control[] { labelSecondarySize, barSecondarySize, updownSecondarySize };
+            rows = new[]
+            {
+                sizeRow, lengthRow, gapRow,
+                new Control[] { labelSecondary, comboSecondary, secondaryColorBox },
+                secondarySizeRow,
+                new Control[] { checkboxShowOverlay },
+                new Control[] { labelHotkey, textHotkey },
+            };
+            designTop = rows.SelectMany(r => r).ToDictionary(c => c, c => c.Top);
+            rowTop = rows.Select(r => r.Min(c => c.Top)).ToArray();
+            designClientHeight = ClientSize.Height;
+            designFontHeight = CurrentAutoScaleDimensions.Height;
+        }
+
+        private void ShowRow(Control[] row, bool show)
+        {
+            foreach (Control c in row)
+                c.Visible = show;
+            if (show) hiddenRows.Remove(row); else hiddenRows.Add(row);
+        }
+
+        // Stack the shown rows from the designer positions. Positions are rescaled by the font ratio so
+        // this stays right after WinForms rescales the form for a different monitor DPI.
+        private void LayoutRows()
+        {
+            float scale = CurrentAutoScaleDimensions.Height / designFontHeight;
+            int hidden = 0;
+            for (int i = 0; i < rows.Length; i++)
+            {
+                if (hiddenRows.Contains(rows[i]))
+                {
+                    hidden += (i + 1 < rows.Length ? rowTop[i + 1] : designClientHeight) - rowTop[i];
+                    continue;
+                }
+                foreach (Control c in rows[i])
+                    c.Top = (int)Math.Round((designTop[c] - hidden) * scale);
+            }
+            ClientSize = new Size(ClientSize.Width, (int)Math.Round((designClientHeight - hidden) * scale));
+        }
+
+        protected override void WndProc(ref Message m)
+        {
+            if (m.Msg == WM_HOTKEY)
+                checkboxShowOverlay.Checked = !checkboxShowOverlay.Checked;
+            base.WndProc(ref m);
+        }
+
+        // While the Hotkey box has focus, every key press (incl. Tab, Alt+X, Ctrl+A) is captured here
+        // before the TextBox or dialog-key handling can consume it.
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            if (!textHotkey.Focused)
+                return base.ProcessCmdKey(ref msg, keyData);
+
+            if (keyData is Keys.Back or Keys.Delete)
+                settings.Hotkey = Keys.None;
+            else if (AppSettings.IsValidHotkey(keyData))
+                settings.Hotkey = keyData;
+            else if (keyData != Keys.Escape)
+                return true; // lone modifier or plain key: keep listening
+
+            ActiveControl = null; // ends recording; Leave re-registers
+            return true;
+        }
+
+        private void textHotkey_Enter(object sender, EventArgs e)
+        {
+            UnregisterHotKey(Handle, 1); // so pressing the current combo records it instead of toggling
+            textHotkey.Text = "Press keys...";
+        }
+
+        private void textHotkey_Leave(object sender, EventArgs e)
+        {
+            ApplyHotkey();
+        }
+
+        private void ApplyHotkey()
+        {
+            Keys hotkey = settings.Hotkey;
+            UnregisterHotKey(Handle, 1);
+            uint mods = ((hotkey & Keys.Alt) != 0 ? MOD_ALT : 0) |
+                        ((hotkey & Keys.Control) != 0 ? MOD_CONTROL : 0) |
+                        ((hotkey & Keys.Shift) != 0 ? MOD_SHIFT : 0);
+            bool ok = hotkey == Keys.None ||
+                      RegisterHotKey(Handle, 1, mods | MOD_NOREPEAT, (uint)(hotkey & Keys.KeyCode));
+            textHotkey.Text = hotkey == Keys.None ? "None" : new KeysConverter().ConvertToString(hotkey);
+            checkboxShowOverlay.Text = ok ? "Show Overlay" : "Show Overlay (hotkey in use)";
+        }
+
+        private void reconnectTimer_Tick(object? sender, EventArgs e)
+        {
+            if (comboScreenMode.SelectedIndex == (int)ScreenMode.Application &&
+                settings.AppProcessName != null &&
+                overlay?.HasLiveTarget == false &&
+                !comboApp.DroppedDown)
+            {
+                UpdateWindowsList();
+            }
         }
 
         private void OnDisplaySettingsChanged(object? sender, EventArgs e)
@@ -126,18 +266,21 @@ namespace SickEaseOverlay
             try
             {
                 comboApp.Items.Clear();
-                int desiredIndex = -1;
+                // Prefer exact process + title; fall back to process only, since many games put FPS/map names in the title.
+                int desiredIndex = -1, processMatchIndex = -1;
                 for (int i = 0; i < windows.Count; i++)
                 {
                     var (_, title, processName) = windows[i];
                     comboApp.Items.Add($"[{processName}.exe]{title}");
-                    if (desiredIndex == -1 &&
-                        settings.AppProcessName == processName &&
-                        settings.AppWindowTitle == title)
-                    {
+                    if (settings.AppProcessName != processName)
+                        continue;
+                    if (processMatchIndex == -1)
+                        processMatchIndex = i;
+                    if (desiredIndex == -1 && settings.AppWindowTitle == title)
                         desiredIndex = i;
-                    }
                 }
+                if (desiredIndex == -1)
+                    desiredIndex = processMatchIndex;
                 if (desiredIndex >= 0)
                     comboApp.SelectedIndex = desiredIndex;
             }
@@ -156,9 +299,12 @@ namespace SickEaseOverlay
                 comboScreenMode.Items.Add(mode);
             foreach (string type in Enum.GetNames<CrosshairType>())
                 comboCrosshair.Items.Add(type);
+            foreach (string type in Enum.GetNames<SecondaryCrosshairType>())
+                comboSecondary.Items.Add(type);
 
             // Apply persisted settings to UI controls (events are no-ops while overlay is null).
             comboScreenMode.SelectedIndex = (int)settings.ScreenMode;
+            checkboxHollow.Checked = settings.CrosshairHollow; // before the type, which reads it to enable controls
             comboCrosshair.SelectedIndex = (int)settings.CrosshairType;
 
             barOpacity.Value = settings.Opacity;
@@ -167,14 +313,20 @@ namespace SickEaseOverlay
             barSize.Value = settings.CrosshairSize;
             updownSize.Value = settings.CrosshairSize;
 
+            barLength.Value = settings.CrosshairLength;
+            updownLength.Value = settings.CrosshairLength;
+
+            barGap.Value = settings.CrosshairGap;
+            updownGap.Value = settings.CrosshairGap;
+
             barSecondarySize.Value = settings.SecondaryCrosshairSize;
             updownSecondarySize.Value = settings.SecondaryCrosshairSize;
 
-            checkboxUseSecondary.Checked = settings.UseSecondaryCrosshair;
+            comboSecondary.SelectedIndex = (int)settings.SecondaryCrosshairType;
 
-            Color crosshairColor = Color.FromArgb(settings.CrosshairColorArgb);
-            colorDialog.Color = crosshairColor;
-            colorPickerBox.BackColor = crosshairColor;
+            // The swatches hold the chosen colors; the one ColorDialog is shared by both.
+            colorPickerBox.BackColor = Color.FromArgb(settings.CrosshairColorArgb);
+            secondaryColorBox.BackColor = Color.FromArgb(settings.SecondaryCrosshairColorArgb);
 
             // comboScreenMode_SelectedIndexChanged already fired UpdateScreenList/UpdateWindowsList
             // depending on mode. If the mode matched the default index, force a refresh.
@@ -184,13 +336,7 @@ namespace SickEaseOverlay
                 UpdateWindowsList();
 
             // Now build the overlay with finalized values.
-            overlay = new OverlayForm(
-                crosshairColor,
-                settings.CrosshairSize,
-                settings.CrosshairType,
-                settings.UseSecondaryCrosshair,
-                settings.SecondaryCrosshairSize);
-            overlay.Opacity = settings.Opacity / 100.0;
+            overlay = new OverlayForm(settings);
 
             // Apply target.
             if (settings.ScreenMode == ScreenMode.Fullscreen)
@@ -200,11 +346,13 @@ namespace SickEaseOverlay
             }
             else
             {
-                if (comboApp.SelectedIndex >= 0)
-                    overlay.SetTargetWindow(windows[comboApp.SelectedIndex].hWnd);
+                overlay.SetTargetWindow(comboApp.SelectedIndex >= 0 ? windows[comboApp.SelectedIndex].hWnd : IntPtr.Zero);
             }
 
             overlay.Show();
+
+            ApplyHotkey();
+            reconnectTimer.Start();
         }
 
         private void OnFormClosing(object? sender, FormClosingEventArgs e)
@@ -219,20 +367,15 @@ namespace SickEaseOverlay
             settings.CrosshairType = (CrosshairType)Math.Max(0, comboCrosshair.SelectedIndex);
             settings.Opacity = barOpacity.Value;
             settings.CrosshairSize = barSize.Value;
+            settings.CrosshairLength = barLength.Value;
+            settings.CrosshairGap = barGap.Value;
+            settings.CrosshairHollow = checkboxHollow.Checked;
             settings.SecondaryCrosshairSize = barSecondarySize.Value;
-            settings.UseSecondaryCrosshair = checkboxUseSecondary.Checked;
-            settings.CrosshairColorArgb = colorDialog.Color.ToArgb();
-
-            settings.MonitorDeviceName = (comboMonitor.SelectedIndex >= 0 && comboMonitor.SelectedIndex < cachedScreens.Length)
-                ? cachedScreens[comboMonitor.SelectedIndex].DeviceName
-                : null;
-
-            if (comboApp.SelectedIndex >= 0 && comboApp.SelectedIndex < windows.Count)
-            {
-                var (_, title, processName) = windows[comboApp.SelectedIndex];
-                settings.AppProcessName = processName;
-                settings.AppWindowTitle = title;
-            }
+            settings.SecondaryCrosshairType = (SecondaryCrosshairType)Math.Max(0, comboSecondary.SelectedIndex);
+            settings.UseSecondaryCrosshair = settings.SecondaryCrosshairType != SecondaryCrosshairType.None;
+            settings.CrosshairColorArgb = colorPickerBox.BackColor.ToArgb();
+            settings.SecondaryCrosshairColorArgb = secondaryColorBox.BackColor.ToArgb();
+            // Monitor/app targets are kept current by their SelectedIndexChanged handlers.
         }
 
         private void comboScreenMode_SelectedIndexChanged(object sender, EventArgs e)
@@ -251,29 +394,44 @@ namespace SickEaseOverlay
                     labelMonitor.Enabled = comboMonitor.Enabled = false;
                     labelApp.Visible = comboApp.Visible = true;
                     labelApp.Enabled = comboApp.Enabled = true;
+                    overlay?.SetTargetWindow(IntPtr.Zero); // hide until a window is matched
                     UpdateWindowsList();
                     break;
             }
         }
 
+        // Selection handlers write straight to settings so list refreshes re-select the current choice,
+        // not the one loaded at startup.
         private void comboMonitor_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (comboScreenMode.SelectedIndex == (int)ScreenMode.Fullscreen &&
-                comboMonitor.SelectedIndex >= 0 &&
-                comboMonitor.SelectedIndex < cachedScreens.Length)
+            int i = comboMonitor.SelectedIndex;
+            if (comboScreenMode.SelectedIndex == (int)ScreenMode.Fullscreen && i >= 0 && i < cachedScreens.Length)
             {
-                overlay?.SetTargetMonitor(cachedScreens[comboMonitor.SelectedIndex]);
+                settings.MonitorDeviceName = cachedScreens[i].DeviceName;
+                overlay?.SetTargetMonitor(cachedScreens[i]);
             }
         }
 
         private void comboApp_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (comboScreenMode.SelectedIndex == (int)ScreenMode.Application &&
-                comboApp.SelectedIndex >= 0 &&
-                comboApp.SelectedIndex < windows.Count)
+            int i = comboApp.SelectedIndex;
+            if (comboScreenMode.SelectedIndex == (int)ScreenMode.Application && i >= 0 && i < windows.Count)
             {
-                overlay?.SetTargetWindow(windows[comboApp.SelectedIndex].hWnd);
+                var (hWnd, title, processName) = windows[i];
+                settings.AppProcessName = processName;
+                settings.AppWindowTitle = title;
+                overlay?.SetTargetWindow(hWnd);
             }
+        }
+
+        private void comboApp_DropDown(object sender, EventArgs e)
+        {
+            UpdateWindowsList();
+        }
+
+        private void checkboxShowOverlay_CheckedChanged(object sender, EventArgs e)
+        {
+            overlay?.SetShown(checkboxShowOverlay.Checked);
         }
 
         private void barOpacity_ValueChanged(object sender, EventArgs e)
@@ -290,11 +448,23 @@ namespace SickEaseOverlay
 
         private void colorPickerBox_Click(object sender, EventArgs e)
         {
-            if (colorDialog.ShowDialog() == DialogResult.OK)
-            {
-                colorPickerBox.BackColor = colorDialog.Color;
-                overlay?.SetCrosshairColor(colorDialog.Color);
-            }
+            if (PickColor(colorPickerBox))
+                overlay?.SetCrosshairColor(colorPickerBox.BackColor);
+        }
+
+        private void secondaryColorBox_Click(object sender, EventArgs e)
+        {
+            if (PickColor(secondaryColorBox))
+                overlay?.SetSecondaryColor(secondaryColorBox.BackColor);
+        }
+
+        private bool PickColor(PictureBox swatch)
+        {
+            colorDialog.Color = swatch.BackColor;
+            if (colorDialog.ShowDialog() != DialogResult.OK)
+                return false;
+            swatch.BackColor = colorDialog.Color;
+            return true;
         }
 
         private void barSize_ValueChanged(object sender, EventArgs e)
@@ -310,13 +480,60 @@ namespace SickEaseOverlay
 
         private void comboCrosshair_SelectedIndexChanged(object sender, EventArgs e)
         {
+            UpdateVisibleControls();
             if (comboCrosshair.SelectedIndex >= 0)
                 overlay?.SetCrosshairType((CrosshairType)comboCrosshair.SelectedIndex);
         }
 
-        private void checkboxUseSecondary_CheckedChanged(object sender, EventArgs e)
+        private void checkboxHollow_CheckedChanged(object sender, EventArgs e)
         {
-            overlay?.SetSecondaryCrosshair(checkboxUseSecondary.Checked);
+            UpdateVisibleControls();
+            overlay?.SetCrosshairHollow(checkboxHollow.Checked);
+        }
+
+        // Show only the controls the current shapes use.
+        private void UpdateVisibleControls()
+        {
+            var type = (CrosshairType)comboCrosshair.SelectedIndex;
+            bool lines = type is CrosshairType.Cross or CrosshairType.X;
+            bool shape = type is CrosshairType.Circle or CrosshairType.Square or CrosshairType.Diamond;
+            bool secondary = comboSecondary.SelectedIndex > (int)SecondaryCrosshairType.None;
+            checkboxHollow.Visible = shape;
+            secondaryColorBox.Visible = secondary;
+            ShowRow(sizeRow, lines || shape);
+            ShowRow(lengthRow, lines || (shape && checkboxHollow.Checked));
+            ShowRow(gapRow, lines);
+            ShowRow(secondarySizeRow, secondary);
+            LayoutRows();
+        }
+
+        private void barGap_ValueChanged(object sender, EventArgs e)
+        {
+            updownGap.Value = barGap.Value;
+            overlay?.SetCrosshairGap(barGap.Value);
+        }
+
+        private void updownGap_ValueChanged(object sender, EventArgs e)
+        {
+            barGap.Value = (int)updownGap.Value;
+        }
+
+        private void barLength_ValueChanged(object sender, EventArgs e)
+        {
+            updownLength.Value = barLength.Value;
+            overlay?.SetCrosshairLength(barLength.Value);
+        }
+
+        private void updownLength_ValueChanged(object sender, EventArgs e)
+        {
+            barLength.Value = (int)updownLength.Value;
+        }
+
+        private void comboSecondary_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            UpdateVisibleControls();
+            if (comboSecondary.SelectedIndex >= 0)
+                overlay?.SetSecondaryCrosshairType((SecondaryCrosshairType)comboSecondary.SelectedIndex);
         }
 
         private void barSecondarySize_ValueChanged(object sender, EventArgs e)

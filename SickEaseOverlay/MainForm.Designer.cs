@@ -28,8 +28,11 @@
         /// </summary>
         private void InitializeComponent()
         {
+            components = new System.ComponentModel.Container();
+            toolTip = new ToolTip(components);
             barOpacity = new TrackBar();
-            checkboxUseSecondary = new CheckBox();
+            labelSecondary = new Label();
+            comboSecondary = new ComboBox();
             comboMonitor = new ComboBox();
             labelMonitor = new Label();
             updownOpacity = new NumericUpDown();
@@ -49,6 +52,17 @@
             comboScreenMode = new ComboBox();
             labelApp = new Label();
             comboApp = new ComboBox();
+            checkboxShowOverlay = new CheckBox();
+            labelHotkey = new Label();
+            textHotkey = new TextBox();
+            labelLength = new Label();
+            updownLength = new NumericUpDown();
+            barLength = new TrackBar();
+            checkboxHollow = new CheckBox();
+            labelGap = new Label();
+            updownGap = new NumericUpDown();
+            barGap = new TrackBar();
+            secondaryColorBox = new PictureBox();
             ((System.ComponentModel.ISupportInitialize)barOpacity).BeginInit();
             ((System.ComponentModel.ISupportInitialize)updownOpacity).BeginInit();
             ((System.ComponentModel.ISupportInitialize)colorPickerBox).BeginInit();
@@ -56,11 +70,16 @@
             ((System.ComponentModel.ISupportInitialize)barSize).BeginInit();
             ((System.ComponentModel.ISupportInitialize)updownSecondarySize).BeginInit();
             ((System.ComponentModel.ISupportInitialize)barSecondarySize).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)updownLength).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)barLength).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)updownGap).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)barGap).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)secondaryColorBox).BeginInit();
             SuspendLayout();
             // 
             // barOpacity
             // 
-            barOpacity.Location = new Point(47, 53);
+            barOpacity.Location = new Point(53, 53);
             barOpacity.Margin = new Padding(0);
             barOpacity.Maximum = 100;
             barOpacity.Name = "barOpacity";
@@ -69,25 +88,32 @@
             barOpacity.Value = 100;
             barOpacity.ValueChanged += barOpacity_ValueChanged;
             // 
-            // checkboxUseSecondary
+            // labelSecondary
             // 
-            checkboxUseSecondary.AutoSize = true;
-            checkboxUseSecondary.Checked = true;
-            checkboxUseSecondary.CheckState = CheckState.Checked;
-            checkboxUseSecondary.Location = new Point(2, 157);
-            checkboxUseSecondary.Name = "checkboxUseSecondary";
-            checkboxUseSecondary.Size = new Size(158, 19);
-            checkboxUseSecondary.TabIndex = 6;
-            checkboxUseSecondary.Text = "Use Secondary Crosshair";
-            checkboxUseSecondary.UseVisualStyleBackColor = true;
-            checkboxUseSecondary.CheckedChanged += checkboxUseSecondary_CheckedChanged;
+            labelSecondary.AutoSize = true;
+            labelSecondary.Location = new Point(-1, 210);
+            labelSecondary.Name = "labelSecondary";
+            labelSecondary.Size = new Size(62, 15);
+            labelSecondary.TabIndex = 23;
+            labelSecondary.Text = "Secondary";
+            // 
+            // comboSecondary
+            // 
+            comboSecondary.BackColor = SystemColors.Control;
+            comboSecondary.DropDownStyle = ComboBoxStyle.DropDownList;
+            comboSecondary.FormattingEnabled = true;
+            comboSecondary.Location = new Point(61, 206);
+            comboSecondary.Name = "comboSecondary";
+            comboSecondary.Size = new Size(110, 23);
+            comboSecondary.TabIndex = 6;
+            comboSecondary.SelectedIndexChanged += comboSecondary_SelectedIndexChanged;
             // 
             // comboMonitor
             // 
             comboMonitor.BackColor = SystemColors.Control;
             comboMonitor.DropDownStyle = ComboBoxStyle.DropDownList;
             comboMonitor.FormattingEnabled = true;
-            comboMonitor.Location = new Point(54, 28);
+            comboMonitor.Location = new Point(60, 28);
             comboMonitor.Name = "comboMonitor";
             comboMonitor.Size = new Size(142, 23);
             comboMonitor.TabIndex = 0;
@@ -104,7 +130,7 @@
             // 
             // updownOpacity
             // 
-            updownOpacity.Location = new Point(150, 56);
+            updownOpacity.Location = new Point(156, 56);
             updownOpacity.Name = "updownOpacity";
             updownOpacity.Size = new Size(46, 23);
             updownOpacity.TabIndex = 2;
@@ -124,7 +150,7 @@
             // 
             colorPickerBox.BackColor = Color.Red;
             colorPickerBox.BorderStyle = BorderStyle.FixedSingle;
-            colorPickerBox.Location = new Point(54, 81);
+            colorPickerBox.Location = new Point(60, 81);
             colorPickerBox.Name = "colorPickerBox";
             colorPickerBox.Size = new Size(142, 19);
             colorPickerBox.TabIndex = 6;
@@ -147,7 +173,7 @@
             // labelSize
             // 
             labelSize.AutoSize = true;
-            labelSize.Location = new Point(12, 109);
+            labelSize.Location = new Point(12, 133);
             labelSize.Name = "labelSize";
             labelSize.Size = new Size(29, 15);
             labelSize.TabIndex = 10;
@@ -155,30 +181,30 @@
             // 
             // updownSize
             // 
-            updownSize.Location = new Point(150, 106);
+            updownSize.Location = new Point(156, 130);
             updownSize.Maximum = new decimal(new int[] { 10, 0, 0, 0 });
             updownSize.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
             updownSize.Name = "updownSize";
             updownSize.Size = new Size(46, 23);
-            updownSize.TabIndex = 4;
+            updownSize.TabIndex = 5;
             updownSize.Value = new decimal(new int[] { 3, 0, 0, 0 });
             updownSize.ValueChanged += updownSize_ValueChanged;
             // 
             // barSize
             // 
-            barSize.Location = new Point(47, 103);
+            barSize.Location = new Point(53, 127);
             barSize.Margin = new Padding(0);
             barSize.Minimum = 1;
             barSize.Name = "barSize";
             barSize.Size = new Size(106, 45);
-            barSize.TabIndex = 3;
+            barSize.TabIndex = 4;
             barSize.Value = 3;
             barSize.ValueChanged += barSize_ValueChanged;
             // 
             // labelCrosshair
             // 
             labelCrosshair.AutoSize = true;
-            labelCrosshair.Location = new Point(-1, 135);
+            labelCrosshair.Location = new Point(-1, 109);
             labelCrosshair.Name = "labelCrosshair";
             labelCrosshair.Size = new Size(56, 15);
             labelCrosshair.TabIndex = 12;
@@ -189,16 +215,16 @@
             comboCrosshair.BackColor = SystemColors.Control;
             comboCrosshair.DropDownStyle = ComboBoxStyle.DropDownList;
             comboCrosshair.FormattingEnabled = true;
-            comboCrosshair.Location = new Point(55, 131);
+            comboCrosshair.Location = new Point(61, 105);
             comboCrosshair.Name = "comboCrosshair";
-            comboCrosshair.Size = new Size(142, 23);
-            comboCrosshair.TabIndex = 5;
+            comboCrosshair.Size = new Size(76, 23);
+            comboCrosshair.TabIndex = 3;
             comboCrosshair.SelectedIndexChanged += comboCrosshair_SelectedIndexChanged;
             // 
             // labelSecondarySize
             // 
             labelSecondarySize.AutoSize = true;
-            labelSecondarySize.Location = new Point(11, 180);
+            labelSecondarySize.Location = new Point(11, 234);
             labelSecondarySize.Name = "labelSecondarySize";
             labelSecondarySize.Size = new Size(29, 15);
             labelSecondarySize.TabIndex = 15;
@@ -206,24 +232,25 @@
             // 
             // updownSecondarySize
             // 
-            updownSecondarySize.Location = new Point(149, 177);
-            updownSecondarySize.Maximum = new decimal(new int[] { 10, 0, 0, 0 });
+            updownSecondarySize.Location = new Point(155, 231);
+            updownSecondarySize.Maximum = new decimal(new int[] { 20, 0, 0, 0 });
             updownSecondarySize.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
             updownSecondarySize.Name = "updownSecondarySize";
             updownSecondarySize.Size = new Size(46, 23);
             updownSecondarySize.TabIndex = 14;
-            updownSecondarySize.Value = new decimal(new int[] { 3, 0, 0, 0 });
+            updownSecondarySize.Value = new decimal(new int[] { 6, 0, 0, 0 });
             updownSecondarySize.ValueChanged += updownSecondarySize_ValueChanged;
             // 
             // barSecondarySize
             // 
-            barSecondarySize.Location = new Point(46, 174);
+            barSecondarySize.Location = new Point(52, 228);
             barSecondarySize.Margin = new Padding(0);
+            barSecondarySize.Maximum = 20;
             barSecondarySize.Minimum = 1;
             barSecondarySize.Name = "barSecondarySize";
             barSecondarySize.Size = new Size(106, 45);
             barSecondarySize.TabIndex = 13;
-            barSecondarySize.Value = 3;
+            barSecondarySize.Value = 6;
             barSecondarySize.ValueChanged += barSecondarySize_ValueChanged;
             // 
             // labelScreenMode
@@ -240,7 +267,7 @@
             comboScreenMode.BackColor = SystemColors.Control;
             comboScreenMode.DropDownStyle = ComboBoxStyle.DropDownList;
             comboScreenMode.FormattingEnabled = true;
-            comboScreenMode.Location = new Point(54, 2);
+            comboScreenMode.Location = new Point(60, 2);
             comboScreenMode.Name = "comboScreenMode";
             comboScreenMode.Size = new Size(142, 23);
             comboScreenMode.TabIndex = 16;
@@ -261,18 +288,154 @@
             comboApp.DropDownStyle = ComboBoxStyle.DropDownList;
             comboApp.DropDownWidth = 200;
             comboApp.FormattingEnabled = true;
-            comboApp.Location = new Point(54, 28);
+            comboApp.Location = new Point(60, 28);
             comboApp.Name = "comboApp";
             comboApp.Size = new Size(142, 23);
             comboApp.TabIndex = 18;
+            comboApp.DropDown += comboApp_DropDown;
             comboApp.SelectedIndexChanged += comboApp_SelectedIndexChanged;
+            // 
+            // checkboxShowOverlay
+            // 
+            checkboxShowOverlay.AutoSize = true;
+            checkboxShowOverlay.Checked = true;
+            checkboxShowOverlay.CheckState = CheckState.Checked;
+            checkboxShowOverlay.Location = new Point(2, 261);
+            checkboxShowOverlay.Name = "checkboxShowOverlay";
+            checkboxShowOverlay.Size = new Size(96, 19);
+            checkboxShowOverlay.TabIndex = 20;
+            checkboxShowOverlay.Text = "Show Overlay";
+            checkboxShowOverlay.UseVisualStyleBackColor = true;
+            checkboxShowOverlay.CheckedChanged += checkboxShowOverlay_CheckedChanged;
+            // 
+            // labelHotkey
+            // 
+            labelHotkey.AutoSize = true;
+            labelHotkey.Location = new Point(4, 288);
+            labelHotkey.Name = "labelHotkey";
+            labelHotkey.Size = new Size(45, 15);
+            labelHotkey.TabIndex = 22;
+            labelHotkey.Text = "Hotkey";
+            // 
+            // textHotkey
+            // 
+            textHotkey.BackColor = SystemColors.Window;
+            textHotkey.Location = new Point(60, 284);
+            textHotkey.Name = "textHotkey";
+            textHotkey.ReadOnly = true;
+            textHotkey.Size = new Size(142, 23);
+            textHotkey.TabIndex = 21;
+            toolTip.SetToolTip(textHotkey, "Click, then press a key combination (with Ctrl or Alt, or an F-key).\r\nBackspace/Delete: no hotkey    Esc: cancel");
+            textHotkey.Enter += textHotkey_Enter;
+            textHotkey.Leave += textHotkey_Leave;
+            // 
+            // labelLength
+            // 
+            labelLength.AutoSize = true;
+            labelLength.Location = new Point(5, 158);
+            labelLength.Name = "labelLength";
+            labelLength.Size = new Size(44, 15);
+            labelLength.TabIndex = 26;
+            labelLength.Text = "Length";
+            // 
+            // updownLength
+            // 
+            updownLength.Location = new Point(156, 155);
+            updownLength.Maximum = new decimal(new int[] { 200, 0, 0, 0 });
+            updownLength.Minimum = new decimal(new int[] { 5, 0, 0, 0 });
+            updownLength.Name = "updownLength";
+            updownLength.Size = new Size(46, 23);
+            updownLength.TabIndex = 25;
+            updownLength.Value = new decimal(new int[] { 23, 0, 0, 0 });
+            updownLength.ValueChanged += updownLength_ValueChanged;
+            // 
+            // barLength
+            // 
+            barLength.LargeChange = 10;
+            barLength.Location = new Point(53, 152);
+            barLength.Margin = new Padding(0);
+            barLength.Maximum = 200;
+            barLength.Minimum = 5;
+            barLength.Name = "barLength";
+            barLength.Size = new Size(106, 45);
+            barLength.TabIndex = 24;
+            barLength.TickFrequency = 25;
+            barLength.Value = 23;
+            barLength.ValueChanged += barLength_ValueChanged;
+            // 
+            // checkboxHollow
+            // 
+            checkboxHollow.AutoSize = true;
+            checkboxHollow.Location = new Point(141, 107);
+            checkboxHollow.Name = "checkboxHollow";
+            checkboxHollow.Size = new Size(62, 19);
+            checkboxHollow.TabIndex = 27;
+            checkboxHollow.Text = "Hollow";
+            checkboxHollow.UseVisualStyleBackColor = true;
+            checkboxHollow.CheckedChanged += checkboxHollow_CheckedChanged;
+            toolTip.SetToolTip(checkboxHollow, "Outline instead of filled (Circle, Square, Diamond).\r\nLength sets the radius, Size the line thickness.");
+            // 
+            // labelGap
+            // 
+            labelGap.AutoSize = true;
+            labelGap.Location = new Point(14, 183);
+            labelGap.Name = "labelGap";
+            labelGap.Size = new Size(28, 15);
+            labelGap.TabIndex = 30;
+            labelGap.Text = "Gap";
+            // 
+            // updownGap
+            // 
+            updownGap.Location = new Point(156, 180);
+            updownGap.Maximum = new decimal(new int[] { 100, 0, 0, 0 });
+            updownGap.Name = "updownGap";
+            updownGap.Size = new Size(46, 23);
+            updownGap.TabIndex = 29;
+            updownGap.ValueChanged += updownGap_ValueChanged;
+            // 
+            // barGap
+            // 
+            barGap.Location = new Point(53, 177);
+            barGap.Maximum = 100;
+            barGap.Margin = new Padding(0);
+            barGap.Name = "barGap";
+            barGap.Size = new Size(106, 45);
+            barGap.TabIndex = 28;
+            barGap.TickFrequency = 10;
+            barGap.ValueChanged += barGap_ValueChanged;
+            toolTip.SetToolTip(barGap, "Empty space at the center of Cross/X, so the game's own crosshair stays visible.");
+            // 
+            // secondaryColorBox
+            // 
+            secondaryColorBox.BackColor = Color.Red;
+            secondaryColorBox.BorderStyle = BorderStyle.FixedSingle;
+            secondaryColorBox.Location = new Point(175, 208);
+            secondaryColorBox.Name = "secondaryColorBox";
+            secondaryColorBox.Size = new Size(28, 19);
+            secondaryColorBox.TabIndex = 31;
+            secondaryColorBox.TabStop = false;
+            secondaryColorBox.Click += secondaryColorBox_Click;
+            toolTip.SetToolTip(secondaryColorBox, "Secondary color (a dim color keeps Dots subtle)");
             // 
             // MainForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = SystemColors.Control;
-            ClientSize = new Size(200, 203);
+            ClientSize = new Size(206, 311);
+            Controls.Add(labelSecondary);
+            Controls.Add(comboSecondary);
+            Controls.Add(secondaryColorBox);
+            Controls.Add(checkboxHollow);
+            Controls.Add(labelGap);
+            Controls.Add(updownGap);
+            Controls.Add(barGap);
+            Controls.Add(labelLength);
+            Controls.Add(updownLength);
+            Controls.Add(barLength);
+            Controls.Add(labelHotkey);
+            Controls.Add(textHotkey);
+            Controls.Add(checkboxShowOverlay);
             Controls.Add(labelApp);
             Controls.Add(comboApp);
             Controls.Add(labelScreenMode);
@@ -291,7 +454,6 @@
             Controls.Add(updownOpacity);
             Controls.Add(labelMonitor);
             Controls.Add(comboMonitor);
-            Controls.Add(checkboxUseSecondary);
             Controls.Add(barOpacity);
             FormBorderStyle = FormBorderStyle.FixedToolWindow;
             MaximizeBox = false;
@@ -306,6 +468,11 @@
             ((System.ComponentModel.ISupportInitialize)barSize).EndInit();
             ((System.ComponentModel.ISupportInitialize)updownSecondarySize).EndInit();
             ((System.ComponentModel.ISupportInitialize)barSecondarySize).EndInit();
+            ((System.ComponentModel.ISupportInitialize)updownLength).EndInit();
+            ((System.ComponentModel.ISupportInitialize)barLength).EndInit();
+            ((System.ComponentModel.ISupportInitialize)updownGap).EndInit();
+            ((System.ComponentModel.ISupportInitialize)barGap).EndInit();
+            ((System.ComponentModel.ISupportInitialize)secondaryColorBox).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -313,7 +480,8 @@
         #endregion
 
         private TrackBar barOpacity;
-        private CheckBox checkboxUseSecondary;
+        private Label labelSecondary;
+        private ComboBox comboSecondary;
         private ComboBox comboMonitor;
         private Label labelMonitor;
         private NumericUpDown updownOpacity;
@@ -333,5 +501,17 @@
         private ComboBox comboScreenMode;
         private Label labelApp;
         private ComboBox comboApp;
+        private CheckBox checkboxShowOverlay;
+        private Label labelHotkey;
+        private TextBox textHotkey;
+        private ToolTip toolTip;
+        private Label labelLength;
+        private NumericUpDown updownLength;
+        private TrackBar barLength;
+        private CheckBox checkboxHollow;
+        private Label labelGap;
+        private NumericUpDown updownGap;
+        private TrackBar barGap;
+        private PictureBox secondaryColorBox;
     }
 }
